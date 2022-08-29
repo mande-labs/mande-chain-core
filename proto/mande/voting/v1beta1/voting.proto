@@ -1,0 +1,21 @@
+syntax = "proto3";
+package mande.voting.v1beta1;
+
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/mande-labs/mande/v1/x/voting/types";
+
+message VoteBook {
+  option (gogoproto.goproto_stringer) = false;
+  string index                        = 1; 
+  uint64 positive                     = 2; 
+  uint64 negative                     = 3; 
+}
+
+message AggregateVoteCount {
+  option (gogoproto.goproto_stringer)   = false;
+  string index                          = 1; 
+  uint64 aggregateVotesCasted           = 2; 
+  uint64 aggregateVotesReceived         = 3; 
+  bool isAggregateVotesReceivedNegative = 4; 
+}

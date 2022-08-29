@@ -1,0 +1,15 @@
+syntax = "proto3";
+package mande.voting.v1beta1;
+
+import "gogoproto/gogo.proto";
+import "mande/voting/v1beta1/params.proto";
+import "mande/voting/v1beta1/voting.proto";
+
+option go_package = "github.com/mande-labs/mande/v1/x/voting/types";
+
+// GenesisState defines the voting module's genesis state.
+message GenesisState {
+  Params params = 1 [(gogoproto.nullable) = false];
+  repeated VoteBook voteBookList = 2 [(gogoproto.nullable) = false];
+  repeated AggregateVoteCount aggregateVoteCountList = 3 [(gogoproto.nullable) = false];
+}

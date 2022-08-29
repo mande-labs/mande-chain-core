@@ -1,0 +1,19 @@
+syntax = "proto3";
+package mande.voting.v1beta1;
+
+option go_package = "github.com/mande-labs/mande/v1/x/voting/types";
+
+service Msg {
+  rpc CreateVote(MsgCreateVote) returns (MsgCreateVoteResponse);
+}
+
+message MsgCreateVote {
+  string creator   = 1;
+  string receiver  = 2;
+  uint64 count     = 3;
+  uint64 operation = 4;
+  uint64 mode      = 5;
+}
+
+message MsgCreateVoteResponse {
+}
