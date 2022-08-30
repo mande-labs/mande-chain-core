@@ -15,7 +15,6 @@ message VoteBook {
 message AggregateVoteCount {
   option (gogoproto.goproto_stringer)   = false;
   string index                          = 1; 
-  uint64 aggregateVotesCasted           = 2; 
-  uint64 aggregateVotesReceived         = 3; 
-  bool isAggregateVotesReceivedNegative = 4; 
+  int64 aggregateVotesCasted            = 2; 
+  int64 aggregateVotesReceived          = 3; 
 }
