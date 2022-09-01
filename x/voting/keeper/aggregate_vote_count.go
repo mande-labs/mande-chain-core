@@ -18,7 +18,7 @@ func (k Keeper) SetAggregateVoteCount(ctx sdk.Context, aggregateVoteCount types.
 // GetAggregateVoteCount returns a aggregateVoteCount from its index
 func (k Keeper) GetAggregateVoteCount(
 	ctx sdk.Context,
-	index string
+	index string,
 ) (val types.AggregateVoteCount, found bool) {
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefix(types.AggregateVoteCountKeyPrefix))
 
@@ -33,24 +33,28 @@ func (k Keeper) GetAggregateVoteCount(
 	return val, true
 }
 
+func (k Keeper) GetAllAggregateVoteCount(ctx sdk.Context) (list []types.AggregateVoteCount) {
+	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefix(types.AggregateVoteCountKeyPrefix))
+	iterator := sdk.KVStorePrefixIterator(store, []byte{})
+
+	defer iterator.Close()
+
+	for ; iterator.Valid(); iterator.Next() {
+		var val types.AggregateVoteCount
+		k.cdc.MustUnmarshal(iterator.Value(), &val)
+		list = append(list, val)
+	}
+
+	return
+}
+
 func (k Keeper) ReconcileAggregatedVotes(msg *types.MsgCreateVote, aggregateVoteCreatorCount *types.AggregateVoteCount, aggregateVoteReceiverCount *types.AggregateVoteCount) {
-	if msg.Mode == 0 {
-		switch operation {
-		case 0: // uncast negative votes => ultimately positive votes are considered
-			aggregateVoteCreatorCount.AggregateVotesCasted += msg.Count
-			aggregateVoteCountOfReceiver.AggregateVotesReceived += msg.Count
-		case 1:
-			aggregateVoteCreatorCount.AggregateVotesCasted -= msg.Count
-			aggregateVoteCountOfReceiver.AggregateVotesReceived -= msg.Count
-		}
-	} else if msg.Mode == 1 {
-		switch operation {
-		case 0: // cast negative votes => ultimately negative votes are considered
-			aggregateVoteCreatorCount.AggregateVotesCasted -= msg.Count
-			aggregateVoteCountOfReceiver.AggregateVotesReceived -= msg.Count
-		case 1:
-			aggregateVoteCreatorCount.AggregateVotesCasted += msg.Count
-			aggregateVoteCountOfReceiver.AggregateVotesReceived += msg.Count
-		}
+	switch msg.Mode {
+	case 0:
+		aggregateVoteCreatorCount.AggregateVotesCasted -= msg.Count
+		aggregateVoteReceiverCount.AggregateVotesReceived -= msg.Count
+	case 1:
+		aggregateVoteCreatorCount.AggregateVotesCasted += msg.Count
+		aggregateVoteReceiverCount.AggregateVotesReceived += msg.Count
 	}
 }

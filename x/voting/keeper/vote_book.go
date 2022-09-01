@@ -18,7 +18,7 @@ func (k Keeper) SetVoteBook(ctx sdk.Context, voteBook types.VoteBook) {
 // GetVoteBook returns a voteBook from its index
 func (k Keeper) GetVoteBook(
 	ctx sdk.Context,
-	index string
+	index string,
 ) (val types.VoteBook, found bool) {
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefix(types.VoteBookKeyPrefix))
 
@@ -31,4 +31,19 @@ func (k Keeper) GetVoteBook(
 
 	k.cdc.MustUnmarshal(b, &val)
 	return val, true
+}
+
+func (k Keeper) GetAllVoteBook(ctx sdk.Context) (list []types.VoteBook) {
+	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefix(types.VoteBookKeyPrefix))
+	iterator := sdk.KVStorePrefixIterator(store, []byte{})
+
+	defer iterator.Close()
+
+	for ; iterator.Valid(); iterator.Next() {
+		var val types.VoteBook
+		k.cdc.MustUnmarshal(iterator.Value(), &val)
+		list = append(list, val)
+	}
+
+	return
 }

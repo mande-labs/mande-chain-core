@@ -25,7 +25,7 @@ func (k msgServer) CreateVote(goCtx context.Context, msg *types.MsgCreateVote) (
 		return &types.MsgCreateVoteResponse{}, err
 	}
 
-	if err := k.Keeper.CreateVote(goCtx, msg); err != nil {
+	if err := k.Keeper.CreateVote(ctx, msg); err != nil {
 		return &types.MsgCreateVoteResponse{}, err
 	}
 
