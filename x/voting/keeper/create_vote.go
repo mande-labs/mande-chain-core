@@ -2,11 +2,11 @@ package keeper
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/mande-labs/mande/v1/x/voting/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/mande-labs/mande/v1/x/voting/types"
 )
 
-func (k Keeper) CreateVote(ctx sdk.Context, msg *types.MsgCreateVote) (error){
+func (k Keeper) CreateVote(ctx sdk.Context, msg *types.MsgCreateVote) error {
 	aggregateVoteCreatorCount, found := k.GetAggregateVoteCount(ctx, msg.Creator)
 	if !found {
 		aggregateVoteCreatorCount.Index = msg.Creator
@@ -16,12 +16,12 @@ func (k Keeper) CreateVote(ctx sdk.Context, msg *types.MsgCreateVote) (error){
 
 	switch msg.Mode {
 	case 0:
-		if err := k.uncastVote(ctx, msg, &aggregateVoteCreatorCount); err !=nil {
+		if err := k.uncastVote(ctx, msg, &aggregateVoteCreatorCount); err != nil {
 			return err
 		}
 		break
 	case 1:
-		if err := k.castVote(ctx, msg, &aggregateVoteCreatorCount); err !=nil {
+		if err := k.castVote(ctx, msg, &aggregateVoteCreatorCount); err != nil {
 			return err
 		}
 		break
@@ -32,7 +32,7 @@ func (k Keeper) CreateVote(ctx sdk.Context, msg *types.MsgCreateVote) (error){
 	return nil
 }
 
-func (k Keeper) uncastVote(ctx sdk.Context, msg *types.MsgCreateVote, aggregateVoteCreatorCount *types.AggregateVoteCount) (error){
+func (k Keeper) uncastVote(ctx sdk.Context, msg *types.MsgCreateVote, aggregateVoteCreatorCount *types.AggregateVoteCount) error {
 	voteBookIndex := types.VoteBookIndex(msg.Creator, msg.Receiver)
 	voteBookEntry, found := k.GetVoteBook(ctx, voteBookIndex)
 	if !found {
@@ -59,14 +59,14 @@ func (k Keeper) uncastVote(ctx sdk.Context, msg *types.MsgCreateVote, aggregateV
 			return sdkerrors.Wrapf(types.ErrPositiveVotesCastedLimit, "count = (%s)", msg.Count)
 		}
 	}
-	
+
 	k.ReconcileAggregatedVotes(msg, aggregateVoteCreatorCount, &aggregateVoteReceiverCount)
 	k.SetAggregateVoteCount(ctx, aggregateVoteReceiverCount)
 
 	return nil
 }
 
-func (k Keeper) castVote(ctx sdk.Context, msg *types.MsgCreateVote, aggregateVoteCreatorCount *types.AggregateVoteCount) (error){
+func (k Keeper) castVote(ctx sdk.Context, msg *types.MsgCreateVote, aggregateVoteCreatorCount *types.AggregateVoteCount) error {
 	creator, _ := sdk.AccAddressFromBech32(msg.Creator)
 	voteBalance := k.bankKeeper.GetBalance(ctx, creator, "mand").Amount.Uint64()
 	voteCastCount := aggregateVoteCreatorCount.AggregateVotesCasted + msg.Count
@@ -101,6 +101,6 @@ func (k Keeper) castVote(ctx sdk.Context, msg *types.MsgCreateVote, aggregateVot
 
 	k.ReconcileAggregatedVotes(msg, aggregateVoteCreatorCount, &aggregateVoteReceiverCount)
 	k.SetAggregateVoteCount(ctx, aggregateVoteReceiverCount)
-	
+
 	return nil
 }

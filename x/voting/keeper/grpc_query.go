@@ -2,12 +2,13 @@ package keeper
 
 import (
 	"context"
+
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
+	"github.com/mande-labs/mande/v1/x/voting/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"github.com/mande-labs/mande/v1/x/voting/types"
 )
 
 var _ types.QueryServer = Keeper{}
@@ -41,7 +42,6 @@ func (k Keeper) AggregateVoteCountAll(c context.Context, req *types.QueryAllAggr
 		aggregateVoteCounts = append(aggregateVoteCounts, aggregateVoteCount)
 		return nil
 	})
-
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -86,7 +86,6 @@ func (k Keeper) VoteBookAll(c context.Context, req *types.QueryAllVoteBookReques
 		voteBooks = append(voteBooks, voteBook)
 		return nil
 	})
-
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

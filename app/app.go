@@ -206,12 +206,12 @@ type MandeApp struct { //nolint: revive
 	UpgradeKeeper    upgradekeeper.Keeper
 	ParamsKeeper     paramskeeper.Keeper
 	// IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
-	IBCKeeper       *ibckeeper.Keeper
-	ICAHostKeeper   icahostkeeper.Keeper
-	EvidenceKeeper  evidencekeeper.Keeper
-	TransferKeeper  ibctransferkeeper.Keeper
-	FeeGrantKeeper  feegrantkeeper.Keeper
-	GroupKeeper     groupkeeper.Keeper
+	IBCKeeper      *ibckeeper.Keeper
+	ICAHostKeeper  icahostkeeper.Keeper
+	EvidenceKeeper evidencekeeper.Keeper
+	TransferKeeper ibctransferkeeper.Keeper
+	FeeGrantKeeper feegrantkeeper.Keeper
+	GroupKeeper    groupkeeper.Keeper
 
 	RouterKeeper routerkeeper.Keeper
 
@@ -336,7 +336,7 @@ func NewMandeApp(
 	app.GroupKeeper = groupkeeper.NewKeeper(
 		keys[group.StoreKey],
 		appCodec,
-		app.MsgServiceRouter(),
+		app.BaseApp.MsgServiceRouter(),
 		app.AccountKeeper,
 		groupConfig,
 	)
@@ -432,7 +432,7 @@ func NewMandeApp(
 		app.BankKeeper,
 		app.StakingKeeper,
 		govRouter,
-		app.MsgServiceRouter(),
+		app.BaseApp.MsgServiceRouter(),
 		govConfig,
 	)
 
@@ -477,7 +477,7 @@ func NewMandeApp(
 		&app.IBCKeeper.PortKeeper,
 		app.AccountKeeper,
 		scopedICAHostKeeper,
-		app.MsgServiceRouter(),
+		app.BaseApp.MsgServiceRouter(),
 	)
 	icaModule := ica.NewAppModule(nil, &app.ICAHostKeeper)
 	icaHostIBCModule := icahost.NewIBCModule(app.ICAHostKeeper)
@@ -623,9 +623,9 @@ func NewMandeApp(
 	// app.mm.SetOrderMigrations(custom order)
 
 	app.mm.RegisterInvariants(&app.CrisisKeeper)
-	app.mm.RegisterRoutes(app.Router(), app.QueryRouter(), encodingConfig.Amino)
+	app.mm.RegisterRoutes(app.BaseApp.Router(), app.BaseApp.QueryRouter(), encodingConfig.Amino)
 
-	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
+	app.configurator = module.NewConfigurator(app.appCodec, app.BaseApp.MsgServiceRouter(), app.BaseApp.GRPCQueryRouter())
 	app.mm.RegisterServices(app.configurator)
 
 	// create the simulation manager and define the order of the modules for deterministic simulations
@@ -652,9 +652,9 @@ func NewMandeApp(
 	app.sm.RegisterStoreDecoders()
 
 	// initialize stores
-	app.MountKVStores(keys)
-	app.MountTransientStores(tkeys)
-	app.MountMemoryStores(memKeys)
+	app.BaseApp.MountKVStores(keys)
+	app.BaseApp.MountTransientStores(tkeys)
+	app.BaseApp.MountMemoryStores(memKeys)
 
 	anteHandler, err := mandeante.NewAnteHandler(
 		mandeante.HandlerOptions{
@@ -677,17 +677,17 @@ func NewMandeApp(
 					return feeCoins, priority, nil
 				},
 			},
-			IBCkeeper:            app.IBCKeeper,
+			IBCkeeper: app.IBCKeeper,
 		},
 	)
 	if err != nil {
 		panic(fmt.Errorf("failed to create AnteHandler: %s", err))
 	}
 
-	app.SetAnteHandler(anteHandler)
-	app.SetInitChainer(app.InitChainer)
-	app.SetBeginBlocker(app.BeginBlocker)
-	app.SetEndBlocker(app.EndBlocker)
+	app.BaseApp.SetAnteHandler(anteHandler)
+	app.BaseApp.SetInitChainer(app.InitChainer)
+	app.BaseApp.SetBeginBlocker(app.BeginBlocker)
+	app.BaseApp.SetEndBlocker(app.EndBlocker)
 
 	app.UpgradeKeeper.SetUpgradeHandler(
 		upgradeName,
@@ -741,11 +741,11 @@ func NewMandeApp(
 		}
 
 		// configure store loader that checks if version == upgradeHeight and applies store upgrades
-		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
+		app.BaseApp.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
 	}
 
 	if loadLatest {
-		if err := app.LoadLatestVersion(); err != nil {
+		if err := app.BaseApp.LoadLatestVersion(); err != nil {
 			tmos.Exit(fmt.Sprintf("failed to load latest version: %s", err))
 		}
 	}
@@ -791,7 +791,7 @@ func (app *MandeApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abc
 
 // LoadHeight loads a particular height
 func (app *MandeApp) LoadHeight(height int64) error {
-	return app.LoadVersion(height)
+	return app.BaseApp.LoadVersion(height)
 }
 
 // ModuleAccountAddrs returns all the app's module account addresses.

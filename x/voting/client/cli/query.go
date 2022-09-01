@@ -1,12 +1,13 @@
 package cli
 
 import (
-	"fmt"
 	"context"
-	"github.com/spf13/cobra"
+	"fmt"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/mande-labs/mande/v1/x/voting/types"
+	"github.com/spf13/cobra"
 )
 
 // GetQueryCmd returns the cli query commands for this module

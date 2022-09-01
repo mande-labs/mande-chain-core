@@ -170,3 +170,15 @@ clean:
     tmp-swagger-gen/
 
 .PHONY: distclean clean
+
+###############################################################################
+###                                Linting                                  ###
+###############################################################################
+
+lint:
+	@echo "--> Running linter"
+	@go run github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout=10m
+
+format:
+	@go run github.com/golangci/golangci-lint/cmd/golangci-lint run ./... --fix
+	@go run mvdan.cc/gofumpt -l -w x/ app/

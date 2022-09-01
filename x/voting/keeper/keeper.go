@@ -6,18 +6,18 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdktypes "github.com/cosmos/cosmos-sdk/store/v2alpha1"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/mande-labs/mande/v1/x/voting/types"
 )
 
 type (
 	Keeper struct {
-		cdc        codec.BinaryCodec
-		storeKey   sdktypes.StoreKey
-		memKey     sdktypes.StoreKey
-		paramstore paramtypes.Subspace
+		cdc           codec.BinaryCodec
+		storeKey      sdktypes.StoreKey
+		memKey        sdktypes.StoreKey
+		paramstore    paramtypes.Subspace
 		accountKeeper types.AccountKeeper
 		bankKeeper    types.BankKeeper
 	}
@@ -42,7 +42,7 @@ func NewKeeper(
 		memKey:        memKey,
 		paramstore:    ps,
 		accountKeeper: accountKeeper,
-		bankKeeper: bankKeeper,
+		bankKeeper:    bankKeeper,
 	}
 }
 

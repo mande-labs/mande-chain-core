@@ -7,10 +7,10 @@ import (
 
 func NewMsgCreateVote(creator string, receiver string, count int64, mode uint32) *MsgCreateVote {
 	return &MsgCreateVote{
-		Creator:   creator,
-		Receiver:  receiver,
-		Count:     count,
-		Mode:      mode,
+		Creator:  creator,
+		Receiver: receiver,
+		Count:    count,
+		Mode:     mode,
 	}
 }
 
