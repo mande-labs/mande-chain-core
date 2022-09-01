@@ -111,6 +111,10 @@ import (
 	mandeante "github.com/mande-labs/mande/v1/ante"
 	mandeappparams "github.com/mande-labs/mande/v1/app/params"
 
+	"github.com/mande-labs/mande/v1/x/voting"
+	votingkeeper "github.com/mande-labs/mande/v1/x/voting/keeper"
+	votingtypes "github.com/mande-labs/mande/v1/x/voting/types"
+
 	// unnamed import of statik for swagger UI support
 	_ "github.com/cosmos/cosmos-sdk/client/docs/statik"
 )
@@ -152,6 +156,7 @@ var (
 		vesting.AppModuleBasic{},
 		router.AppModuleBasic{},
 		ica.AppModuleBasic{},
+		voting.AppModuleBasic{},
 	)
 
 	// module account permissions
@@ -164,6 +169,7 @@ var (
 		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
 		govtypes.ModuleName:            {authtypes.Burner},
 		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
+		votingtypes.ModuleName:         {authtypes.Minter, authtypes.Burner, authtypes.Staking},
 	}
 )
 
@@ -208,6 +214,8 @@ type MandeApp struct { //nolint: revive
 	GroupKeeper     groupkeeper.Keeper
 
 	RouterKeeper routerkeeper.Keeper
+
+	VotingKeeper votingkeeper.Keeper
 
 	// make scoped keepers public for test purposes
 	ScopedIBCKeeper      capabilitykeeper.ScopedKeeper
@@ -262,7 +270,7 @@ func NewMandeApp(
 		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 		govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
 		evidencetypes.StoreKey, ibctransfertypes.StoreKey,
-		capabilitytypes.StoreKey, feegrant.StoreKey, routertypes.StoreKey, icahosttypes.StoreKey, group.StoreKey,
+		capabilitytypes.StoreKey, feegrant.StoreKey, routertypes.StoreKey, icahosttypes.StoreKey, group.StoreKey, votingtypes.StoreKey,
 	)
 	tkeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
 	memKeys := sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
@@ -437,6 +445,16 @@ func NewMandeApp(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
+	app.VotingKeeper = *votingkeeper.NewKeeper(
+		appCodec,
+		keys[votingtypes.StoreKey],
+		keys[votingtypes.MemStoreKey],
+		app.GetSubspace(votingtypes.ModuleName),
+		app.AccountKeeper,
+		app.BankKeeper,
+	)
+	votingModule := voting.NewAppModule(appCodec, app.VotingKeeper, app.AccountKeeper, app.BankKeeper)
+
 	app.TransferKeeper = ibctransferkeeper.NewKeeper(
 		appCodec,
 		keys[ibctransfertypes.StoreKey],
@@ -515,6 +533,7 @@ func NewMandeApp(
 		icaModule,
 		routerModule,
 		routerModule,
+		votingModule,
 	)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
@@ -544,6 +563,7 @@ func NewMandeApp(
 		group.ModuleName,
 		paramstypes.ModuleName,
 		vestingtypes.ModuleName,
+		votingtypes.ModuleName,
 	)
 	app.mm.SetOrderEndBlockers(
 		crisistypes.ModuleName,
@@ -566,6 +586,7 @@ func NewMandeApp(
 		paramstypes.ModuleName,
 		upgradetypes.ModuleName,
 		vestingtypes.ModuleName,
+		votingtypes.ModuleName,
 	)
 
 	// NOTE: The genutils module must occur after staking so that pools are
@@ -595,6 +616,7 @@ func NewMandeApp(
 		paramstypes.ModuleName,
 		upgradetypes.ModuleName,
 		vestingtypes.ModuleName,
+		votingtypes.ModuleName,
 	)
 
 	// Uncomment if you want to set a custom migration order here.
