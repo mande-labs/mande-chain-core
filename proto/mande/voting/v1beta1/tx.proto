@@ -10,9 +10,8 @@ service Msg {
 message MsgCreateVote {
   string creator   = 1;
   string receiver  = 2;
-  uint64 count     = 3;
-  uint64 operation = 4;
-  uint64 mode      = 5;
+  int64 count      = 3;
+  uint32 mode      = 4;
 }
 
 message MsgCreateVoteResponse {
