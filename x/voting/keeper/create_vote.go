@@ -19,12 +19,10 @@ func (k Keeper) CreateVote(ctx sdk.Context, msg *types.MsgCreateVote) error {
 		if err := k.uncastVote(ctx, msg, &aggregateVoteCreatorCount); err != nil {
 			return err
 		}
-		break
 	case 1:
 		if err := k.castVote(ctx, msg, &aggregateVoteCreatorCount); err != nil {
 			return err
 		}
-		break
 	default:
 		return sdkerrors.Wrapf(types.ErrInvalidVotingMode, "mode - (%s)", msg.Mode)
 	}
@@ -62,6 +60,7 @@ func (k Keeper) uncastVote(ctx sdk.Context, msg *types.MsgCreateVote, aggregateV
 
 	k.ReconcileAggregatedVotes(msg, aggregateVoteCreatorCount, &aggregateVoteReceiverCount)
 	k.SetAggregateVoteCount(ctx, aggregateVoteReceiverCount)
+	k.SetAggregateVoteCount(ctx, *aggregateVoteCreatorCount)
 
 	return nil
 }
@@ -73,8 +72,6 @@ func (k Keeper) castVote(ctx sdk.Context, msg *types.MsgCreateVote, aggregateVot
 	if int64(voteBalance) < voteCastCount {
 		return sdkerrors.Wrapf(types.ErrNotEnoughMand, "count - (%s)", msg.Count)
 	}
-
-	aggregateVoteCreatorCount.AggregateVotesCasted += msg.Count
 
 	voteBookIndex := types.VoteBookIndex(msg.Creator, msg.Receiver)
 	voteBookEntry, found := k.GetVoteBook(ctx, voteBookIndex)
@@ -101,6 +98,7 @@ func (k Keeper) castVote(ctx sdk.Context, msg *types.MsgCreateVote, aggregateVot
 
 	k.ReconcileAggregatedVotes(msg, aggregateVoteCreatorCount, &aggregateVoteReceiverCount)
 	k.SetAggregateVoteCount(ctx, aggregateVoteReceiverCount)
+	k.SetAggregateVoteCount(ctx, *aggregateVoteCreatorCount)
 
 	return nil
 }
