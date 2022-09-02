@@ -13,4 +13,5 @@ var (
 	ErrPositiveVotesCastedLimit = sdkerrors.Register(ModuleName, 5, "you have not casted this many positive votes")
 	ErrNegativeVotesCastedLimit = sdkerrors.Register(ModuleName, 6, "you have not casted this many negative votes")
 	ErrNotEnoughMand            = sdkerrors.Register(ModuleName, 7, "not enough MAND to use for voting")
+	ErrCastingZeroVotes         = sdkerrors.Register(ModuleName, 8, "invalid vote amount")
 )

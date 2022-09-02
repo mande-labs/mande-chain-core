@@ -49,12 +49,13 @@ func (k Keeper) GetAllAggregateVoteCount(ctx sdk.Context) (list []types.Aggregat
 }
 
 func (k Keeper) ReconcileAggregatedVotes(msg *types.MsgCreateVote, aggregateVoteCreatorCount *types.AggregateVoteCount, aggregateVoteReceiverCount *types.AggregateVoteCount) {
+	voteCount := intAbs(msg.Count)
 	switch msg.Mode {
 	case 0:
-		aggregateVoteCreatorCount.AggregateVotesCasted -= msg.Count
-		aggregateVoteReceiverCount.AggregateVotesReceived -= msg.Count
+		aggregateVoteCreatorCount.AggregateVotesCasted -= voteCount
+		aggregateVoteReceiverCount.AggregateVotesReceived -= voteCount
 	case 1:
-		aggregateVoteCreatorCount.AggregateVotesCasted += msg.Count
-		aggregateVoteReceiverCount.AggregateVotesReceived += msg.Count
+		aggregateVoteCreatorCount.AggregateVotesCasted += voteCount
+		aggregateVoteReceiverCount.AggregateVotesReceived += voteCount
 	}
 }

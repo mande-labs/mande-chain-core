@@ -31,5 +31,9 @@ func (msg *MsgCreateVote) ValidateBasic() error {
 	if err != nil {
 		return sdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid receiver address (%s)", err)
 	}
+
+	if msg.Count == 0 {
+		return sdkerrors.Wrap(ErrCastingZeroVotes, "invalid vote count")
+	}
 	return nil
 }

@@ -42,22 +42,22 @@ func (k Keeper) uncastVote(ctx sdk.Context, msg *types.MsgCreateVote, aggregateV
 		return sdkerrors.Wrap(types.ErrNoVotesCasted, msg.Receiver)
 	}
 
+	voteCount := intAbs(msg.Count)
 	if msg.Count < 0 {
-		if voteBookEntry.Negative >= uint64(msg.Count) {
-			voteBookEntry.Negative -= uint64(msg.Count)
-			k.SetVoteBook(ctx, voteBookEntry)
+		if voteBookEntry.Negative >= voteCount {
+			voteBookEntry.Negative -= voteCount
 		} else {
 			return sdkerrors.Wrapf(types.ErrNegativeVotesCastedLimit, "count - (%s)", msg.Count)
 		}
 	} else {
-		if voteBookEntry.Positive >= uint64(msg.Count) {
-			voteBookEntry.Positive -= uint64(msg.Count)
-			k.SetVoteBook(ctx, voteBookEntry)
+		if voteBookEntry.Positive >= voteCount {
+			voteBookEntry.Positive -= voteCount
 		} else {
 			return sdkerrors.Wrapf(types.ErrPositiveVotesCastedLimit, "count = (%s)", msg.Count)
 		}
 	}
 
+	k.SetVoteBook(ctx, voteBookEntry)
 	k.ReconcileAggregatedVotes(msg, aggregateVoteCreatorCount, &aggregateVoteReceiverCount)
 	k.SetAggregateVoteCount(ctx, aggregateVoteReceiverCount)
 	k.SetAggregateVoteCount(ctx, *aggregateVoteCreatorCount)
@@ -67,9 +67,10 @@ func (k Keeper) uncastVote(ctx sdk.Context, msg *types.MsgCreateVote, aggregateV
 
 func (k Keeper) castVote(ctx sdk.Context, msg *types.MsgCreateVote, aggregateVoteCreatorCount *types.AggregateVoteCount) error {
 	creator, _ := sdk.AccAddressFromBech32(msg.Creator)
-	voteBalance := k.bankKeeper.GetBalance(ctx, creator, "mand").Amount.Uint64()
-	voteCastCount := aggregateVoteCreatorCount.AggregateVotesCasted + msg.Count
-	if int64(voteBalance) < voteCastCount {
+	mandBalance := k.bankKeeper.GetBalance(ctx, creator, "mand").Amount.Uint64()
+	voteCastCount := aggregateVoteCreatorCount.AggregateVotesCasted + intAbs(msg.Count)
+
+	if mandBalance < voteCastCount {
 		return sdkerrors.Wrapf(types.ErrNotEnoughMand, "count - (%s)", msg.Count)
 	}
 
@@ -81,10 +82,11 @@ func (k Keeper) castVote(ctx sdk.Context, msg *types.MsgCreateVote, aggregateVot
 		voteBookEntry.Negative = 0
 	}
 
+	voteCount := intAbs(msg.Count)
 	if msg.Count < 0 {
-		voteBookEntry.Negative += uint64(msg.Count)
+		voteBookEntry.Negative += voteCount
 	} else {
-		voteBookEntry.Positive += uint64(msg.Count)
+		voteBookEntry.Positive += voteCount
 	}
 
 	k.SetVoteBook(ctx, voteBookEntry)
