@@ -11,6 +11,6 @@ message VoteBook {
 
 message AggregateVoteCount {
   string index                          = 1; 
-  int64 aggregateVotesCasted            = 2; 
-  int64 aggregateVotesReceived          = 3; 
+  uint64 aggregateVotesCasted            = 2; 
+  uint64 aggregateVotesReceived          = 3; 
 }
