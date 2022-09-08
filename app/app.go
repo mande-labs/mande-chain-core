@@ -111,6 +111,10 @@ import (
 	mandeante "github.com/mande-labs/mande/v1/ante"
 	mandeappparams "github.com/mande-labs/mande/v1/app/params"
 
+	"github.com/mande-labs/mande/v1/x/voting"
+	votingkeeper "github.com/mande-labs/mande/v1/x/voting/keeper"
+	votingtypes "github.com/mande-labs/mande/v1/x/voting/types"
+
 	// unnamed import of statik for swagger UI support
 	_ "github.com/cosmos/cosmos-sdk/client/docs/statik"
 )
@@ -152,6 +156,7 @@ var (
 		vesting.AppModuleBasic{},
 		router.AppModuleBasic{},
 		ica.AppModuleBasic{},
+		voting.AppModuleBasic{},
 	)
 
 	// module account permissions
@@ -164,6 +169,7 @@ var (
 		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
 		govtypes.ModuleName:            {authtypes.Burner},
 		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
+		votingtypes.ModuleName:         {authtypes.Minter, authtypes.Burner, authtypes.Staking},
 	}
 )
 
@@ -200,14 +206,16 @@ type MandeApp struct { //nolint: revive
 	UpgradeKeeper    upgradekeeper.Keeper
 	ParamsKeeper     paramskeeper.Keeper
 	// IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
-	IBCKeeper       *ibckeeper.Keeper
-	ICAHostKeeper   icahostkeeper.Keeper
-	EvidenceKeeper  evidencekeeper.Keeper
-	TransferKeeper  ibctransferkeeper.Keeper
-	FeeGrantKeeper  feegrantkeeper.Keeper
-	GroupKeeper     groupkeeper.Keeper
+	IBCKeeper      *ibckeeper.Keeper
+	ICAHostKeeper  icahostkeeper.Keeper
+	EvidenceKeeper evidencekeeper.Keeper
+	TransferKeeper ibctransferkeeper.Keeper
+	FeeGrantKeeper feegrantkeeper.Keeper
+	GroupKeeper    groupkeeper.Keeper
 
 	RouterKeeper routerkeeper.Keeper
+
+	VotingKeeper votingkeeper.Keeper
 
 	// make scoped keepers public for test purposes
 	ScopedIBCKeeper      capabilitykeeper.ScopedKeeper
@@ -262,7 +270,7 @@ func NewMandeApp(
 		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 		govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
 		evidencetypes.StoreKey, ibctransfertypes.StoreKey,
-		capabilitytypes.StoreKey, feegrant.StoreKey, routertypes.StoreKey, icahosttypes.StoreKey, group.StoreKey,
+		capabilitytypes.StoreKey, feegrant.StoreKey, routertypes.StoreKey, icahosttypes.StoreKey, group.StoreKey, votingtypes.StoreKey,
 	)
 	tkeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
 	memKeys := sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
@@ -328,7 +336,7 @@ func NewMandeApp(
 	app.GroupKeeper = groupkeeper.NewKeeper(
 		keys[group.StoreKey],
 		appCodec,
-		app.MsgServiceRouter(),
+		app.BaseApp.MsgServiceRouter(),
 		app.AccountKeeper,
 		groupConfig,
 	)
@@ -424,7 +432,7 @@ func NewMandeApp(
 		app.BankKeeper,
 		app.StakingKeeper,
 		govRouter,
-		app.MsgServiceRouter(),
+		app.BaseApp.MsgServiceRouter(),
 		govConfig,
 	)
 
@@ -436,6 +444,16 @@ func NewMandeApp(
 		app.BaseApp,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
+
+	app.VotingKeeper = *votingkeeper.NewKeeper(
+		appCodec,
+		keys[votingtypes.StoreKey],
+		keys[votingtypes.MemStoreKey],
+		app.GetSubspace(votingtypes.ModuleName),
+		app.AccountKeeper,
+		app.BankKeeper,
+	)
+	votingModule := voting.NewAppModule(appCodec, app.VotingKeeper, app.AccountKeeper, app.BankKeeper)
 
 	app.TransferKeeper = ibctransferkeeper.NewKeeper(
 		appCodec,
@@ -459,7 +477,7 @@ func NewMandeApp(
 		&app.IBCKeeper.PortKeeper,
 		app.AccountKeeper,
 		scopedICAHostKeeper,
-		app.MsgServiceRouter(),
+		app.BaseApp.MsgServiceRouter(),
 	)
 	icaModule := ica.NewAppModule(nil, &app.ICAHostKeeper)
 	icaHostIBCModule := icahost.NewIBCModule(app.ICAHostKeeper)
@@ -515,6 +533,7 @@ func NewMandeApp(
 		icaModule,
 		routerModule,
 		routerModule,
+		votingModule,
 	)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
@@ -544,6 +563,7 @@ func NewMandeApp(
 		group.ModuleName,
 		paramstypes.ModuleName,
 		vestingtypes.ModuleName,
+		votingtypes.ModuleName,
 	)
 	app.mm.SetOrderEndBlockers(
 		crisistypes.ModuleName,
@@ -566,6 +586,7 @@ func NewMandeApp(
 		paramstypes.ModuleName,
 		upgradetypes.ModuleName,
 		vestingtypes.ModuleName,
+		votingtypes.ModuleName,
 	)
 
 	// NOTE: The genutils module must occur after staking so that pools are
@@ -595,15 +616,16 @@ func NewMandeApp(
 		paramstypes.ModuleName,
 		upgradetypes.ModuleName,
 		vestingtypes.ModuleName,
+		votingtypes.ModuleName,
 	)
 
 	// Uncomment if you want to set a custom migration order here.
 	// app.mm.SetOrderMigrations(custom order)
 
 	app.mm.RegisterInvariants(&app.CrisisKeeper)
-	app.mm.RegisterRoutes(app.Router(), app.QueryRouter(), encodingConfig.Amino)
+	app.mm.RegisterRoutes(app.BaseApp.Router(), app.BaseApp.QueryRouter(), encodingConfig.Amino)
 
-	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
+	app.configurator = module.NewConfigurator(app.appCodec, app.BaseApp.MsgServiceRouter(), app.BaseApp.GRPCQueryRouter())
 	app.mm.RegisterServices(app.configurator)
 
 	// create the simulation manager and define the order of the modules for deterministic simulations
@@ -630,9 +652,9 @@ func NewMandeApp(
 	app.sm.RegisterStoreDecoders()
 
 	// initialize stores
-	app.MountKVStores(keys)
-	app.MountTransientStores(tkeys)
-	app.MountMemoryStores(memKeys)
+	app.BaseApp.MountKVStores(keys)
+	app.BaseApp.MountTransientStores(tkeys)
+	app.BaseApp.MountMemoryStores(memKeys)
 
 	anteHandler, err := mandeante.NewAnteHandler(
 		mandeante.HandlerOptions{
@@ -655,17 +677,17 @@ func NewMandeApp(
 					return feeCoins, priority, nil
 				},
 			},
-			IBCkeeper:            app.IBCKeeper,
+			IBCkeeper: app.IBCKeeper,
 		},
 	)
 	if err != nil {
 		panic(fmt.Errorf("failed to create AnteHandler: %s", err))
 	}
 
-	app.SetAnteHandler(anteHandler)
-	app.SetInitChainer(app.InitChainer)
-	app.SetBeginBlocker(app.BeginBlocker)
-	app.SetEndBlocker(app.EndBlocker)
+	app.BaseApp.SetAnteHandler(anteHandler)
+	app.BaseApp.SetInitChainer(app.InitChainer)
+	app.BaseApp.SetBeginBlocker(app.BeginBlocker)
+	app.BaseApp.SetEndBlocker(app.EndBlocker)
 
 	app.UpgradeKeeper.SetUpgradeHandler(
 		upgradeName,
@@ -719,11 +741,11 @@ func NewMandeApp(
 		}
 
 		// configure store loader that checks if version == upgradeHeight and applies store upgrades
-		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
+		app.BaseApp.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
 	}
 
 	if loadLatest {
-		if err := app.LoadLatestVersion(); err != nil {
+		if err := app.BaseApp.LoadLatestVersion(); err != nil {
 			tmos.Exit(fmt.Sprintf("failed to load latest version: %s", err))
 		}
 	}
@@ -769,7 +791,7 @@ func (app *MandeApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abc
 
 // LoadHeight loads a particular height
 func (app *MandeApp) LoadHeight(height int64) error {
-	return app.LoadVersion(height)
+	return app.BaseApp.LoadVersion(height)
 }
 
 // ModuleAccountAddrs returns all the app's module account addresses.
